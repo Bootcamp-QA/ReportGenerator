@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Results Report</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f5f7;
+            color: #333;
+            margin: 0;
+            padding: 20px;
+        }
+
+        h1 {
+            color: #34495e;
+            font-size: 2rem;
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        #input-section {
+            background: #ffffff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            margin-bottom: 40px;
+            max-width: 900px;
+            margin: auto;
+        }
+
+        textarea, input[type="file"] {
+            width: 100%;
+            padding: 12px;
+            margin: 10px 0;
+            font-size: 14px;
+            border-radius: 4px;
+            border: 1px solid #d1d1d1;
+        }
+
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            color: #ffffff;
+            background-color: #007bff;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        button:hover {
+            background-color: #0056b3;
+        }
+
+        #report {
+            background: #ffffff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            max-width: 900px;
+            margin: auto;
+        }
+
+        .summary {
+            margin-bottom: 30px;
+            display: flex;
+            justify-content: space-around;
+            text-align: center;
+        }
+
+        .summary-item {
+            padding: 15px;
+            border-radius: 8px;
+            color: #ffffff;
+            width: 30%;
+            cursor: pointer;
+            transition: transform 0.2s ease;
+        }
+
+        .summary-item:hover {
+            transform: scale(1.05);
+        }
+
+        .summary-item.total {
+            background-color: #007bff;
+        }
+
+        .summary-item.passed {
+            background-color: #28a745;
+        }
+
+        .summary-item.failed {
+            background-color: #dc3545;
+        }
+
+        .summary-item h2 {
+            font-size: 1.5rem;
+            margin: 0;
+        }
+
+        .summary-item p {
+            margin: 5px 0 0;
+            font-size: 1.1rem;
+        }
+
+        .test-result {
+            border-top: 1px solid #e9ecef;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+
+        .test-result.passed {
+            background-color: #d4edda; /* Light green */
+            border-left: 6px solid #28a745; /* Green border */
+        }
+
+        .test-result.failed {
+            background-color: #f8d7da; /* Light red */
+            border-left: 6px solid #dc3545; /* Red border */
+        }
+
+        .test-name {
+            font-size: 1.2rem;
+            font-weight: bold;
+            margin: 0;
+        }
+
+        .test-status {
+            font-size: 0.9rem;
+            color: #6c757d;
+            margin: 5px 0 0;
+        }
+
+        .test-details {
+            margin-top: 10px;
+            font-size: 0.9rem;
+            color: #495057;
+        }
+
+        .test-details div {
+            margin-bottom: 5px;
+        }
+
+        a {
+            color: #007bff;
+            text-decoration: none;
+        }
+
+        a:hover {
+            text-decoration: underline;
+        }
+
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>POSTMAN API Test Results Report</h1>
+
+    <div id="input-section">
+        <h2>Upload your POSTMAN JSON file or paste the JSON content</h2>
+        <input type="file" id="fileInput">
+        <br>
+        <textarea id="jsonInput" rows="10" placeholder="Paste your JSON here"></textarea>
+        <br>
+        <button onclick="generateReport()">Generate Report</button>
+    </div>
+
+    <div id="report"></div>
+
+    <script>
+        function generateReport() {
+            const reportDiv = document.getElementById('report');
+            const inputSection = document.getElementById('input-section');
+            reportDiv.innerHTML = ''; // Clear previous report
+
+            let jsonData;
+
+            // Check if a file was uploaded
+            const fileInput = document.getElementById('fileInput');
+            if (fileInput.files.length > 0) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    try {
+                        jsonData = JSON.parse(e.target.result);
+                        displayReport(jsonData);
+                        inputSection.style.display = 'none';
+                    } catch (error) {
+                        alert('The JSON file is not valid.');
+                    }
+                };
+                reader.readAsText(fileInput.files[0]);
+            } else {
+                // Otherwise, use the pasted JSON
+                const jsonInput = document.getElementById('jsonInput').value;
+                try {
+                    jsonData = JSON.parse(jsonInput);
+                    displayReport(jsonData);
+                    inputSection.style.display = 'none';
+                } catch (error) {
+                    alert('The pasted JSON content is not valid.');
+                }
+            }
+        }
+
+        function displayReport(jsonData) {
+            const reportDiv = document.getElementById('report');
+
+            // Calculate progress
+            const totalTests = jsonData.totalPass + jsonData.totalFail;
+
+            // Create summary section
+            const summary = `
+                <div class="summary">
+                    <div class="summary-item total" onclick="filterResults('all')">
+                        <h2>${totalTests}</h2>
+                        <p>Total Executed</p>
+                    </div>
+                    <div class="summary-item passed" onclick="filterResults('passed')">
+                        <h2>${jsonData.totalPass}</h2>
+                        <p>Tests Passed</p>
+                    </div>
+                    <div class="summary-item failed" onclick="filterResults('failed')">
+                        <h2>${jsonData.totalFail}</h2>
+                        <p>Tests Failed</p>
+                    </div>
+                </div>
+            `;
+            reportDiv.innerHTML += summary;
+
+            // Create detailed results section
+            reportDiv.innerHTML += '<h2>Detailed Results</h2>';
+
+            jsonData.results.forEach((result, index) => {
+                // Check if all tests pass
+                const allTestsPassed = Object.values(result.testPassFailCounts).every(test => test.pass === 1 && test.fail === 0);
+                const statusClass = allTestsPassed ? 'passed' : 'failed';
+
+                // Create result for each request
+                const testResult = `
+                    <div class="test-result ${statusClass}" data-index="${index}">
+                        <p class="test-name">${result.name}</p>
+                        <p class="test-status">${allTestsPassed ? 'Passed' : 'Failed'}</p>
+                        <div class="test-details">
+                            <div><strong>URL:</strong> <a href="${result.url}" target="_blank">${result.url}</a></div>
+                            <div><strong>Execution Time:</strong> ${result.time} ms</div>
+                            <div><strong>Response Code:</strong> ${result.responseCode.code} (${result.responseCode.name})</div>
+                        </div>
+                        <h3>Test Details:</h3>
+                        <ul>
+                            ${Object.keys(result.testPassFailCounts).map(testName => {
+                                const test = result.testPassFailCounts[testName];
+                                return `<li><strong>${testName}:</strong> ${test.pass === 0 ? 'Failed' : 'Passed'}</li>`;
+                            }).join('')}
+                        </ul>
+                    </div>
+                `;
+                reportDiv.innerHTML += testResult;
+            });
+        }
+
+        function filterResults(type) {
+            const results = document.querySelectorAll('.test-result');
+
+            results.forEach(result => {
+                result.classList.remove('hidden');
+                if (type === 'passed' && !result.classList.contains('passed')) {
+                    result.classList.add('hidden');
+                } else if (type === 'failed' && !result.classList.contains('failed')) {
+                    result.classList.add('hidden');
+                } else if (type === 'all') {
+                    result.classList.remove('hidden');
+                }
+            });
+        }
+    </script>
+
+</body>
