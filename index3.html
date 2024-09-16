@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Results</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            margin-bottom: 40px;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+        .upload-section {
+            margin-bottom: 20px;
+        }
+        .feature-title {
+            margin-top: 40px;
+            font-size: 1.5em;
+            font-weight: bold;
+        }
+        .status-passed {
+            background-color: #d4edda; /* Light green */
+            color: #155724;
+        }
+        .status-failed {
+            background-color: #f8d7da; /* Light red */
+            color: #721c24;
+        }
+        .status-notrun {
+            background-color: #fff3cd; /* Light yellow */
+            color: #856404;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Test Report Generator</h1>
+        <div class="upload-section">
+            <label for="csvFile">Upload CSV file:</label>
+            <input type="file" id="csvFile" accept=".csv">
+        </div>
+        <div id="reportContainer">
+            <!-- Content will be dynamically inserted here -->
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('csvFile').addEventListener('change', function(event) {
+            const file = event.target.files[0];
+            if (file && file.name.endsWith('.csv')) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const content = e.target.result;
+                    const parsedData = parseCSV(content);
+                    generateGroupedReport(parsedData);
+                };
+                reader.readAsText(file);
+            }
+        });
+
+        // Function to parse the CSV, respecting double quotes and newlines inside cells
+        function parseCSV(content) {
+            const rows = [];
+            let currentRow = [];
+            let currentCell = '';
+            let insideQuotes = false;
+
+            for (let i = 0; i < content.length; i++) {
+                const char = content[i];
+                const nextChar = content[i + 1];
+
+                if (char === '"') {
+                    if (insideQuotes && nextChar === '"') {
+                        // Escape double quotes ("")
+                        currentCell += '"';
+                        i++;  // Skip the next quote
+                    } else {
+                        // Toggle the state of open/closed quotes
+                        insideQuotes = !insideQuotes;
+                    }
+                } else if (char === ',' && !insideQuotes) {
+                    // End of a cell
+                    currentRow.push(currentCell.trim());
+                    currentCell = '';
+                } else if (char === '\n' && !insideQuotes) {
+                    // End of a row
+                    if (currentCell || currentRow.length > 0) {
+                        currentRow.push(currentCell.trim());
+                        rows.push(currentRow);
+                        currentRow = [];
+                        currentCell = '';
+                    }
+                } else {
+                    // Add characters to the current cell
+                    currentCell += char;
+                }
+            }
+
+            // Ensure the last row is also processed
+            if (currentCell || currentRow.length > 0) {
+                currentRow.push(currentCell.trim());
+                rows.push(currentRow);
+            }
+
+            return rows;
+        }
+
+        // Function to escape special HTML characters
+        function escapeHTML(text) {
+            const map = {
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                '"': '&quot;',
+                "'": '&#039;'
+            };
+            return text.replace(/[&<>"']/g, function(m) { return map[m]; });
+        }
+
+        // Function to get the class for status based on the result
+        function getStatusClass(status) {
+            if (status.toLowerCase() === 'passed') {
+                return 'status-passed';
+            } else if (status.toLowerCase() === 'failed') {
+                return 'status-failed';
+            } else if (status.toLowerCase() === 'not run yet') {
+                return 'status-notrun';
+            }
+            return '';
+        }
+
+        // Function to group scenarios by "Feature name" and generate separate tables
+        function generateGroupedReport(data) {
+            const reportContainer = document.getElementById('reportContainer');
+            reportContainer.innerHTML = ''; // Clear existing content
+
+            const headers = data[0]; // The first row contains the headers
+            const jiraIssueIndex = headers.indexOf('Jira Issue');
+            const featureIndex = headers.indexOf('Feature');
+            const scenarioIndex = headers.indexOf('Scenario');
+            const statusIndex = headers.indexOf('Status');
+            const stepsIndex = headers.indexOf('Steps');
+
+            const groupedData = {};
+
+            // Group the data by "Jira Issue"
+            data.slice(1).forEach(row => {
+                const jiraIssue = row[jiraIssueIndex];
+                const featureName = row[featureIndex];
+                const scenarioName = row[scenarioIndex];
+                const status = row[statusIndex];
+                const steps = row[stepsIndex];
+
+                if (!groupedData[jiraIssue]) {
+                    groupedData[jiraIssue] = [];
+                }
+
+                groupedData[jiraIssue].push({
+                    feature: featureName,
+                    scenario: scenarioName,
+                    status: status,
+                    steps: steps
+                });
+            });
+
+            // Generate a table for each "Jira Issue"
+            for (const jiraIssue in groupedData) {
+                const featureTitle = document.createElement('div');
+                featureTitle.classList.add('feature-title');
+                featureTitle.textContent = `${jiraIssue}`;
+                reportContainer.appendChild(featureTitle);
+
+                const table = document.createElement('table');
+                table.innerHTML = `
+                    <thead>
+                        <tr>
+                            <th>Feature</th>
+                            <th>Scenario</th>
+                            <th>Steps</th>
+                            <th>Test Result</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${groupedData[jiraIssue].map(item => `
+                            <tr>
+                                <td>${escapeHTML(item.feature)}</td>
+                                <td>${escapeHTML(item.scenario)}</td>
+                                <td>${escapeHTML(item.steps).replace(/\n/g, '<br>')}</td>
+                                <td class="${getStatusClass(item.status)}">${escapeHTML(item.status)}</td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                `;
+                reportContainer.appendChild(table);
+            }
+        }
+    </script>
+</body>
+</html>
+
