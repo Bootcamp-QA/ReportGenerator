@@ -152,22 +152,15 @@
 
             const headers = data[0]; // The first row contains the header
 
-const jiraIssueIndex = headers.indexOf('Jira Issue') !== -1 ? headers.indexOf('Jira Issue') : headers.indexOf('Jira Incidencia') !== -1 ? headers.indexOf('Jira Incidencia') : 0;
-const featureIndex = headers.indexOf('Feature') !== -1 ? headers.indexOf('Feature') : headers.indexOf('Caracter�stica') !== -1 ? headers.indexOf('Característica') : 0;
-const scenarioIndex = headers.indexOf('Scenario') !== -1 ? headers.indexOf('Scenario') : headers.indexOf('Escenario') !== -1 ? headers.indexOf('Escenario') : 0;
-const statusIndex = headers.indexOf('Status') !== -1 ? headers.indexOf('Status') : headers.indexOf('Estado') !== -1 ? headers.indexOf('Estado') : 0;
-const stepsIndex = headers.indexOf('Steps') !== -1 ? headers.indexOf('Steps') : headers.indexOf('Pasos') !== -1 ? headers.indexOf('Pasos') : 0;
-
-
             const groupedData = {};
 
             // Group the data by "Jira Issue"
             data.slice(1).forEach(row => {
-                const jiraIssue = row[jiraIssueIndex];
-                const featureName = row[featureIndex];
-                const scenarioName = row[scenarioIndex];
-                const status = row[statusIndex];
-                const steps = row[stepsIndex];
+                const jiraIssue = row[0];
+                const featureName = row[1];
+                const scenarioName = row[2];
+                const status = row[4];
+                const steps = row[7];
 
                 if (!groupedData[jiraIssue]) {
                     groupedData[jiraIssue] = [];
